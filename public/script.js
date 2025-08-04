@@ -3,6 +3,8 @@
 const API_BASE = '/api';
 let currentUser = null;
 let currentPage = 1;
+let totalPages = 1;
+let totalPosts = 0;
 let editingPostId = null;
 let currentImageFile = null; // Lưu trạng thái ảnh hiện tại
 
@@ -20,8 +22,14 @@ function setupEventListeners() {
     document.getElementById('registerFormElement').addEventListener('submit', handleRegister);
     
     // Filters
-    document.getElementById('categoryFilter').addEventListener('change', loadPosts);
-    document.getElementById('sortBy').addEventListener('change', loadPosts);
+    document.getElementById('categoryFilter').addEventListener('change', () => {
+        currentPage = 1; // Reset về trang 1 khi filter
+        loadPosts();
+    });
+    document.getElementById('sortBy').addEventListener('change', () => {
+        currentPage = 1; // Reset về trang 1 khi sort
+        loadPosts();
+    });
 }
 
 // Image preview functions
@@ -208,12 +216,92 @@ async function loadPosts(page = 1) {
         if (response.ok) {
             const posts = await response.json();
             displayPosts(posts);
+            
+            // Tính toán phân trang
+            await calculatePagination(category, sortBy);
         } else {
             showAlert('Không thể tải danh sách bài viết!', 'danger');
         }
     } catch (error) {
         showAlert('Lỗi kết nối!', 'danger');
     }
+}
+
+// Tính toán phân trang
+async function calculatePagination(category, sortBy) {
+    try {
+        const params = new URLSearchParams({
+            page: 1,
+            limit: 1000, // Lấy tất cả để đếm
+            sortBy: sortBy
+        });
+        
+        if (category) params.append('category', category);
+
+        const response = await fetch(`${API_BASE}/posts?${params}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (response.ok) {
+            const allPosts = await response.json();
+            totalPosts = allPosts.length;
+            totalPages = Math.ceil(totalPosts / 6);
+            displayPagination();
+        }
+    } catch (error) {
+        console.error('Error calculating pagination:', error);
+    }
+}
+
+// Hiển thị phân trang
+function displayPagination() {
+    const paginationContainer = document.getElementById('pagination');
+    paginationContainer.innerHTML = '';
+
+    if (totalPages <= 1) {
+        return; // Không hiển thị phân trang nếu chỉ có 1 trang
+    }
+
+    // Nút Previous
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `
+        <button class="page-link" onclick="loadPosts(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+            <i class="fas fa-chevron-left"></i> Trước
+        </button>
+    `;
+    paginationContainer.appendChild(prevLi);
+
+    // Các nút số trang
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+
+    for (let i = startPage; i <= endPage; i++) {
+        const pageLi = document.createElement('li');
+        pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+        pageLi.innerHTML = `
+            <button class="page-link" onclick="loadPosts(${i})">${i}</button>
+        `;
+        paginationContainer.appendChild(pageLi);
+    }
+
+    // Nút Next
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+    nextLi.innerHTML = `
+        <button class="page-link" onclick="loadPosts(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+            Tiếp <i class="fas fa-chevron-right"></i>
+        </button>
+    `;
+    paginationContainer.appendChild(nextLi);
+
+    // Hiển thị thông tin trang
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'text-center mt-2 text-muted';
+    infoDiv.innerHTML = `Trang ${currentPage} / ${totalPages} (${totalPosts} bài viết)`;
+    paginationContainer.parentNode.appendChild(infoDiv);
 }
 
 function displayPosts(posts) {
