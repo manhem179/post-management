@@ -100,7 +100,7 @@ async function handleLogin(e) {
         
         if (response.ok) {
             localStorage.setItem('token', result.token);
-            currentUser = { username: data.username };
+            currentUser = { username: data.username }; // Lưu username thực tế
             showMainContent();
             loadPosts();
             showAlert('Đăng nhập thành công!', 'success');
@@ -144,6 +144,7 @@ function logout() {
     localStorage.removeItem('token');
     currentUser = null;
     showLoginForm();
+    updateNavigationBar(false); // Ẩn nút đăng xuất
     showAlert('Đã đăng xuất!', 'info');
 }
 
@@ -153,6 +154,9 @@ function checkAuthStatus() {
         currentUser = { username: 'User' }; // Simplified
         showMainContent();
         loadPosts();
+        updateNavigationBar(true); // Hiển thị nút đăng xuất
+    } else {
+        updateNavigationBar(false); // Ẩn nút đăng xuất
     }
 }
 
@@ -162,6 +166,7 @@ function showLoginForm() {
     document.getElementById('mainContent').style.display = 'none';
     document.getElementById('loginForm').style.display = 'block';
     document.getElementById('registerForm').style.display = 'none';
+    updateNavigationBar(false); // Ẩn nút đăng xuất
 }
 
 function showRegisterForm() {
@@ -169,11 +174,35 @@ function showRegisterForm() {
     document.getElementById('mainContent').style.display = 'none';
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'block';
+    updateNavigationBar(false); // Ẩn nút đăng xuất
 }
 
 function showMainContent() {
     document.getElementById('authForms').style.display = 'none';
     document.getElementById('mainContent').style.display = 'block';
+    updateNavigationBar(true); // Hiển thị nút đăng xuất
+}
+
+function updateNavigationBar(isLoggedIn) {
+    const navItems = document.getElementById('navItems');
+    
+    if (isLoggedIn) {
+        // Hiển thị nút đăng xuất và thông tin user
+        navItems.innerHTML = `
+            <span class="navbar-text me-3">
+                <i class="fas fa-user me-1"></i>Xin chào, ${currentUser?.username || 'User'}!
+            </span>
+            <button class="btn btn-outline-light" onclick="logout()">
+                <i class="fas fa-sign-out-alt me-1"></i>Đăng xuất
+            </button>
+        `;
+    } else {
+        // Hiển thị nút đăng nhập/đăng ký
+        navItems.innerHTML = `
+            <button class="btn btn-outline-light me-2" onclick="showLoginForm()">Đăng nhập</button>
+            <button class="btn btn-light" onclick="showRegisterForm()">Đăng ký</button>
+        `;
+    }
 }
 
 function showAlert(message, type) {
