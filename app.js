@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth.routes');
 const postRoutes = require('./routes/post.routes');
 const path = require('path');
 const { connectRedis } = require('./cache/redisClient');
+const upload = require('./middlewares/upload');
 
 const app = express();
 
@@ -28,10 +29,13 @@ app.get('/api/posts', require('./controllers/post.controller').getPosts);
 app.get('/api/posts/:id', require('./controllers/post.controller').getPost);
 app.get('/api/posts/export', verifyToken, require('./controllers/post.controller').exportCSV);
 
-// Protected routes
-app.post('/api/posts', verifyToken, require('./middlewares/upload').single('thumbnail'), require('./controllers/post.controller').createPost);
-app.put('/api/posts/:id', verifyToken, require('./middlewares/upload').single('thumbnail'), require('./controllers/post.controller').updatePost);
+// Protected routes with upload error handling
+app.post('/api/posts', verifyToken, upload.single('thumbnail'), require('./controllers/post.controller').createPost);
+app.put('/api/posts/:id', verifyToken, upload.single('thumbnail'), require('./controllers/post.controller').updatePost);
 app.delete('/api/posts/:id', verifyToken, require('./controllers/post.controller').deletePost);
+
+// Upload error handling
+app.use(upload.handleUploadError);
 
 // Serve frontend
 app.get('/', (req, res) => {

@@ -4,6 +4,7 @@ const API_BASE = '/api';
 let currentUser = null;
 let currentPage = 1;
 let editingPostId = null;
+let currentImageFile = null; // Lưu trạng thái ảnh hiện tại
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
@@ -34,6 +35,7 @@ function previewImage(input) {
         if (file.size > 2 * 1024 * 1024) {
             showAlert('File quá lớn! Kích thước tối đa là 2MB.', 'danger');
             input.value = '';
+            currentImageFile = null;
             return;
         }
         
@@ -42,8 +44,12 @@ function previewImage(input) {
         if (!validTypes.includes(file.type)) {
             showAlert('Chỉ chấp nhận file .jpg, .jpeg, .png!', 'danger');
             input.value = '';
+            currentImageFile = null;
             return;
         }
+        
+        // Lưu file để sử dụng sau
+        currentImageFile = file;
         
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -53,6 +59,7 @@ function previewImage(input) {
         reader.readAsDataURL(file);
     } else {
         preview.style.display = 'none';
+        currentImageFile = null;
     }
 }
 
@@ -62,6 +69,7 @@ function removeImage() {
     
     input.value = '';
     preview.style.display = 'none';
+    currentImageFile = null;
 }
 
 // Auth functions
@@ -296,6 +304,7 @@ function getCategoryName(category) {
 // Post CRUD functions
 function showCreatePostForm() {
     editingPostId = null;
+    currentImageFile = null;
     document.getElementById('modalTitle').textContent = 'Tạo bài viết mới';
     document.getElementById('postForm').reset();
     document.getElementById('imagePreview').style.display = 'none';
@@ -304,6 +313,7 @@ function showCreatePostForm() {
 
 function editPost(postId) {
     editingPostId = postId;
+    currentImageFile = null;
     document.getElementById('modalTitle').textContent = 'Chỉnh sửa bài viết';
     
     // Load post data
@@ -338,6 +348,11 @@ async function savePost() {
     const form = document.getElementById('postForm');
     const formData = new FormData(form);
     
+    // Thêm file ảnh nếu có
+    if (currentImageFile) {
+        formData.set('thumbnail', currentImageFile);
+    }
+    
     const url = editingPostId 
         ? `${API_BASE}/posts/${editingPostId}`
         : `${API_BASE}/posts`;
@@ -368,10 +383,12 @@ async function savePost() {
             showAlert(editingPostId ? 'Cập nhật thành công!' : 'Tạo bài viết thành công!', 'success');
             bootstrap.Modal.getInstance(document.getElementById('postModal')).hide();
             loadPosts(currentPage);
+            currentImageFile = null; // Reset image file
         } else {
             showAlert(result.message || 'Thao tác thất bại!', 'danger');
         }
     } catch (error) {
+        console.error('Save post error:', error);
         showAlert('Lỗi kết nối!', 'danger');
     } finally {
         // Reset button state
