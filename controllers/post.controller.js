@@ -3,6 +3,7 @@ const postEvents = require('../events/post.event');
 const { writePostsToCSV } = require('../utils/csvExport');
 const { sendMockEmail } = require('../utils/emailMock');
 const redis = require('../cache/redisClient');
+const fs = require('fs');
 
 exports.getPosts = async (req, res) => {
   const { page = 1, limit = 10, sortBy = 'createdAt', category } = req.query;
@@ -30,11 +31,27 @@ exports.getPost = async (req, res) => {
 
 exports.createPost = async (req, res) => {
   try {
+    let imageData = null;
+    let thumbnail = null;
+
+    // Xử lý ảnh nếu có
+    if (req.file) {
+      // Đọc file và convert thành Base64
+      const fileBuffer = fs.readFileSync(req.file.path);
+      imageData = `data:${req.file.mimetype};base64,${fileBuffer.toString('base64')}`;
+      thumbnail = req.file.filename;
+      
+      // Xóa file tạm sau khi đã convert
+      fs.unlinkSync(req.file.path);
+    }
+
     const post = new Post({
       ...req.body,
       author: req.user.id,
-      thumbnail: req.file?.filename
+      thumbnail: thumbnail,
+      imageData: imageData
     });
+    
     await post.save();
     postEvents.emit('post:created', post);
     sendMockEmail(post);
@@ -67,8 +84,17 @@ exports.updatePost = async (req, res) => {
 
     // Cập nhật thông tin
     const updateData = { ...req.body };
+    
+    // Xử lý ảnh mới nếu có
     if (req.file) {
+      // Đọc file và convert thành Base64
+      const fileBuffer = fs.readFileSync(req.file.path);
+      updateData.imageData = `data:${req.file.mimetype};base64,${fileBuffer.toString('base64')}`;
       updateData.thumbnail = req.file.filename;
+      
+      // Xóa file tạm sau khi đã convert
+      fs.unlinkSync(req.file.path);
+      
       console.log('New thumbnail:', req.file.filename);
     }
 

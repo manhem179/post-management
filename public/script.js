@@ -334,7 +334,14 @@ function createPostCard(post) {
     const col = document.createElement('div');
     col.className = 'col-md-6 col-lg-4 mb-4';
     
-    const thumbnailUrl = post.thumbnail ? `/uploads/${post.thumbnail}` : 'https://via.placeholder.com/300x200?text=No+Image';
+    // Ưu tiên hiển thị ảnh từ Base64, nếu không có thì dùng file path
+    let thumbnailUrl = 'https://via.placeholder.com/300x200?text=No+Image';
+    if (post.imageData) {
+        thumbnailUrl = post.imageData; // Base64 data
+    } else if (post.thumbnail) {
+        thumbnailUrl = `/uploads/${post.thumbnail}`; // File path
+    }
+    
     const categoryClass = getCategoryClass(post.category);
     const formattedDate = new Date(post.createdAt).toLocaleDateString('vi-VN');
     
@@ -425,10 +432,17 @@ function editPost(postId) {
         form.category.value = post.category;
         
         // Show existing image if available
-        if (post.thumbnail) {
+        if (post.imageData || post.thumbnail) {
             const preview = document.getElementById('imagePreview');
             const previewImg = document.getElementById('previewImg');
-            previewImg.src = `/uploads/${post.thumbnail}`;
+            
+            // Ưu tiên hiển thị ảnh từ Base64
+            if (post.imageData) {
+                previewImg.src = post.imageData;
+            } else if (post.thumbnail) {
+                previewImg.src = `/uploads/${post.thumbnail}`;
+            }
+            
             preview.style.display = 'block';
         }
         
