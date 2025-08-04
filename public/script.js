@@ -23,6 +23,47 @@ function setupEventListeners() {
     document.getElementById('sortBy').addEventListener('change', loadPosts);
 }
 
+// Image preview functions
+function previewImage(input) {
+    const file = input.files[0];
+    const preview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    
+    if (file) {
+        // Validate file size (2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            showAlert('File quá lớn! Kích thước tối đa là 2MB.', 'danger');
+            input.value = '';
+            return;
+        }
+        
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        if (!validTypes.includes(file.type)) {
+            showAlert('Chỉ chấp nhận file .jpg, .jpeg, .png!', 'danger');
+            input.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+function removeImage() {
+    const input = document.querySelector('input[name="thumbnail"]');
+    const preview = document.getElementById('imagePreview');
+    
+    input.value = '';
+    preview.style.display = 'none';
+}
+
 // Auth functions
 async function handleLogin(e) {
     e.preventDefault();
@@ -196,7 +237,7 @@ function createPostCard(post) {
     
     col.innerHTML = `
         <div class="card post-card h-100">
-            <img src="${thumbnailUrl}" class="card-img-top post-thumbnail" alt="${post.title}">
+            <img src="${thumbnailUrl}" class="card-img-top post-thumbnail" alt="${post.title}" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
             <div class="card-body d-flex flex-column">
                 <div class="mb-2">
                     <span class="badge ${categoryClass} category-badge">${getCategoryName(post.category)}</span>
@@ -257,6 +298,7 @@ function showCreatePostForm() {
     editingPostId = null;
     document.getElementById('modalTitle').textContent = 'Tạo bài viết mới';
     document.getElementById('postForm').reset();
+    document.getElementById('imagePreview').style.display = 'none';
     new bootstrap.Modal(document.getElementById('postModal')).show();
 }
 
@@ -276,6 +318,15 @@ function editPost(postId) {
         form.title.value = post.title;
         form.content.value = post.content;
         form.category.value = post.category;
+        
+        // Show existing image if available
+        if (post.thumbnail) {
+            const preview = document.getElementById('imagePreview');
+            const previewImg = document.getElementById('previewImg');
+            previewImg.src = `/uploads/${post.thumbnail}`;
+            preview.style.display = 'block';
+        }
+        
         new bootstrap.Modal(document.getElementById('postModal')).show();
     })
     .catch(error => {
@@ -292,6 +343,15 @@ async function savePost() {
         : `${API_BASE}/posts`;
     
     const method = editingPostId ? 'PUT' : 'POST';
+    
+    // Show loading state
+    const saveButton = document.querySelector('#postModal .btn-primary');
+    const saveButtonText = document.getElementById('saveButtonText');
+    const saveButtonSpinner = document.getElementById('saveButtonSpinner');
+    
+    saveButton.disabled = true;
+    saveButtonText.textContent = 'Đang lưu...';
+    saveButtonSpinner.style.display = 'inline-block';
     
     try {
         const response = await fetch(url, {
@@ -313,6 +373,11 @@ async function savePost() {
         }
     } catch (error) {
         showAlert('Lỗi kết nối!', 'danger');
+    } finally {
+        // Reset button state
+        saveButton.disabled = false;
+        saveButtonText.textContent = 'Lưu';
+        saveButtonSpinner.style.display = 'none';
     }
 }
 

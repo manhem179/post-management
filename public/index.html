@@ -141,14 +141,30 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Ảnh đại diện</label>
-                                <input type="file" class="form-control" name="thumbnail" accept=".jpg,.jpeg,.png">
+                                <input type="file" class="form-control" name="thumbnail" accept=".jpg,.jpeg,.png" onchange="previewImage(this)">
                                 <small class="text-muted">Chỉ chấp nhận file .jpg, .jpeg, .png, tối đa 2MB</small>
+                                
+                                <!-- Image Preview -->
+                                <div id="imagePreview" class="mt-2" style="display: none;">
+                                    <img id="previewImg" class="img-thumbnail" style="max-width: 200px; max-height: 200px;">
+                                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeImage()">
+                                        <i class="fas fa-times"></i> Xóa ảnh
+                                    </button>
+                                </div>
+                                
+                                <!-- Upload Progress -->
+                                <div id="uploadProgress" class="progress mt-2" style="display: none;">
+                                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
                             </div>
                         </form>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                        <button type="button" class="btn btn-primary" onclick="savePost()">Lưu</button>
+                        <button type="button" class="btn btn-primary" onclick="savePost()">
+                            <span id="saveButtonText">Lưu</span>
+                            <span id="saveButtonSpinner" class="spinner-border spinner-border-sm ms-1" style="display: none;"></span>
+                        </button>
                     </div>
                 </div>
             </div>
