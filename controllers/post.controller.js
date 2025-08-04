@@ -29,38 +29,91 @@ exports.getPost = async (req, res) => {
 };
 
 exports.createPost = async (req, res) => {
-  const post = new Post({
-    ...req.body,
-    author: req.user.id,
-    thumbnail: req.file?.filename
-  });
-  await post.save();
-  postEvents.emit('post:created', post);
-  sendMockEmail(post);
-  await redis.flushAll();
-  res.json(post);
+  try {
+    const post = new Post({
+      ...req.body,
+      author: req.user.id,
+      thumbnail: req.file?.filename
+    });
+    await post.save();
+    postEvents.emit('post:created', post);
+    sendMockEmail(post);
+    await redis.flushAll();
+    res.json(post);
+  } catch (error) {
+    console.error('Create post error:', error);
+    res.status(500).json({ message: 'Error creating post' });
+  }
 };
 
 exports.updatePost = async (req, res) => {
-  const post = await Post.findOne({ _id: req.params.id, author: req.user.id });
-  if (!post) return res.status(403).json({ message: 'Not allowed' });
+  try {
+    console.log('Update post - User ID:', req.user.id);
+    console.log('Update post - Post ID:', req.params.id);
+    
+    // Tìm bài viết và kiểm tra quyền
+    const post = await Post.findById(req.params.id);
+    
+    if (!post) {
+      console.log('Post not found');
+      return res.status(404).json({ message: 'Bài viết không tồn tại' });
+    }
+    
+    // Kiểm tra quyền sở hữu
+    if (post.author.toString() !== req.user.id) {
+      console.log('Permission denied - Post author:', post.author, 'User ID:', req.user.id);
+      return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa bài viết này' });
+    }
 
-  Object.assign(post, req.body);
-  if (req.file) post.thumbnail = req.file.filename;
-  await post.save();
-  await redis.flushAll();
-  res.json(post);
+    // Cập nhật thông tin
+    const updateData = { ...req.body };
+    if (req.file) {
+      updateData.thumbnail = req.file.filename;
+      console.log('New thumbnail:', req.file.filename);
+    }
+
+    const updatedPost = await Post.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('author', 'username');
+
+    await redis.flushAll();
+    res.json(updatedPost);
+  } catch (error) {
+    console.error('Update post error:', error);
+    res.status(500).json({ message: 'Lỗi khi cập nhật bài viết' });
+  }
 };
 
 exports.deletePost = async (req, res) => {
-  const post = await Post.findOneAndDelete({ _id: req.params.id, author: req.user.id });
-  if (!post) return res.status(403).json({ message: 'Not allowed' });
-  await redis.flushAll();
-  res.json({ message: 'Post deleted' });
+  try {
+    const post = await Post.findById(req.params.id);
+    
+    if (!post) {
+      return res.status(404).json({ message: 'Bài viết không tồn tại' });
+    }
+    
+    if (post.author.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Bạn không có quyền xóa bài viết này' });
+    }
+    
+    await Post.findByIdAndDelete(req.params.id);
+    await redis.flushAll();
+    res.json({ message: 'Post deleted' });
+  } catch (error) {
+    console.error('Delete post error:', error);
+    res.status(500).json({ message: 'Lỗi khi xóa bài viết' });
+  }
 };
 
 exports.exportCSV = async (req, res) => {
-  const posts = await Post.find().populate('author', 'username');
-  const filePath = await writePostsToCSV(posts);
-  res.download(filePath);
+  try {
+    const posts = await Post.find().populate('author', 'username');
+    const filePath = await writePostsToCSV(posts);
+    res.download(filePath);
+  } catch (error) {
+    console.error('Export CSV error:', error);
+    res.status(500).json({ message: 'Lỗi khi xuất CSV' });
+  }
 };
