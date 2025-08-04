@@ -22,13 +22,13 @@ function setupEventListeners() {
     document.getElementById('registerFormElement').addEventListener('submit', handleRegister);
     
     // Filters
-    document.getElementById('categoryFilter').addEventListener('change', () => {
+    document.getElementById('categoryFilter').addEventListener('change', function() {
         currentPage = 1; // Reset về trang 1 khi filter
-        loadPosts();
+        loadPosts(1);
     });
-    document.getElementById('sortBy').addEventListener('change', () => {
+    document.getElementById('sortBy').addEventListener('change', function() {
         currentPage = 1; // Reset về trang 1 khi sort
-        loadPosts();
+        loadPosts(1);
     });
 }
 
@@ -194,12 +194,13 @@ function showAlert(message, type) {
 
 // Posts functions
 async function loadPosts(page = 1) {
-    currentPage = page;
+    // Đảm bảo page là số
+    currentPage = parseInt(page) || 1;
     const category = document.getElementById('categoryFilter').value;
     const sortBy = document.getElementById('sortBy').value;
     
     const params = new URLSearchParams({
-        page: page,
+        page: currentPage,
         limit: 6,
         sortBy: sortBy
     });
@@ -264,6 +265,12 @@ function displayPagination() {
         return; // Không hiển thị phân trang nếu chỉ có 1 trang
     }
 
+    // Xóa thông tin trang cũ nếu có
+    const existingInfo = paginationContainer.parentNode.querySelector('.pagination-info');
+    if (existingInfo) {
+        existingInfo.remove();
+    }
+
     // Nút Previous
     const prevLi = document.createElement('li');
     prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
@@ -299,7 +306,7 @@ function displayPagination() {
 
     // Hiển thị thông tin trang
     const infoDiv = document.createElement('div');
-    infoDiv.className = 'text-center mt-2 text-muted';
+    infoDiv.className = 'text-center mt-2 text-muted pagination-info';
     infoDiv.innerHTML = `Trang ${currentPage} / ${totalPages} (${totalPosts} bài viết)`;
     paginationContainer.parentNode.appendChild(infoDiv);
 }
