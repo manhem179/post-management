@@ -1,28 +1,30 @@
 // cache/redisClient.js
 const { createClient } = require('redis');
 
-let client;
+// Create mock client by default
+let client = {
+  get: async () => null,
+  set: async () => 'OK',
+  flushAll: async () => 'OK',
+  on: () => {},
+  connect: async () => {}
+};
 
 const connectRedis = async () => {
   try {
-    client = createClient({
+    const redisClient = createClient({
       url: process.env.REDIS_URL || 'redis://localhost:6379'
     });
     
-    await client.connect();
+    await redisClient.connect();
     console.log('🔌 Redis connected');
+    
+    // Replace mock client with real client
+    client = redisClient;
   } catch (err) {
     console.error('❌ Redis connect failed:', err);
     console.log('⚠️ Continuing without Redis cache...');
-    
-    // Create mock client
-    client = {
-      get: async () => null,
-      set: async () => 'OK',
-      flushAll: async () => 'OK',
-      on: () => {},
-      connect: async () => {}
-    };
+    // Keep using mock client
   }
 };
 
