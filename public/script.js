@@ -560,8 +560,65 @@ async function deletePost(postId) {
 }
 
 function viewPost(postId) {
-    // Implement post detail view
-    alert('Chức năng xem chi tiết sẽ được phát triển sau!');
+    // Load post data
+    fetch(`${API_BASE}/posts/${postId}`, {
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
+    .then(response => response.json())
+    .then(post => {
+        // Hiển thị modal chi tiết bài viết
+        const modal = document.getElementById('viewPostModal');
+        const modalTitle = document.getElementById('viewModalTitle');
+        const modalBody = document.getElementById('viewModalBody');
+        
+        // Ưu tiên hiển thị ảnh từ Base64, nếu không có thì dùng file path
+        let thumbnailUrl = 'https://via.placeholder.com/400x300?text=No+Image';
+        if (post.imageData) {
+            thumbnailUrl = post.imageData; // Base64 data
+        } else if (post.thumbnail) {
+            thumbnailUrl = `/uploads/${post.thumbnail}`; // File path
+        }
+        
+        const categoryClass = getCategoryClass(post.category);
+        const categoryName = getCategoryName(post.category);
+        const formattedDate = new Date(post.createdAt).toLocaleDateString('vi-VN');
+        const formattedTime = new Date(post.createdAt).toLocaleTimeString('vi-VN');
+        
+        modalTitle.textContent = post.title;
+        modalBody.innerHTML = `
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <img src="${thumbnailUrl}" class="img-fluid rounded" alt="${post.title}" 
+                         onerror="this.src='https://via.placeholder.com/400x300?text=No+Image'">
+                </div>
+                <div class="col-md-12">
+                    <div class="mb-3">
+                        <span class="badge ${categoryClass} category-badge fs-6">${categoryName}</span>
+                    </div>
+                    <h4 class="mb-3">${post.title}</h4>
+                    <div class="post-meta mb-3">
+                        <small class="text-muted">
+                            <i class="fas fa-user me-1"></i>Tác giả: ${post.author?.username || 'Unknown'}
+                        </small>
+                        <br>
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>Ngày tạo: ${formattedDate} lúc ${formattedTime}
+                        </small>
+                    </div>
+                    <div class="post-content">
+                        <p class="lead">${post.content}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        new bootstrap.Modal(modal).show();
+    })
+    .catch(error => {
+        showAlert('Không thể tải thông tin bài viết!', 'danger');
+    });
 }
 
 async function exportCSV() {
